@@ -1,14 +1,52 @@
 #!/usr/bin/env python
 
-
 import base64
-from bitstring import BitArray
+import binascii
+from ctypes import c_ushort
 from io import BytesIO
 import os
 from subprocess import Popen, PIPE
 import re
 import sys
 import zlib
+
+
+def _chunked(value, n):
+    for i in range(0, len(value), n):
+        yield value[i:i+n]
+
+
+CRC_CCITT_TABLE = None
+
+def _calculate_crc_ccitt(data):
+    """
+    All CRC stuff ripped from PyCRC, GPLv3 licensed
+    """
+    global CRC_CCITT_TABLE
+    if not CRC_CCITT_TABLE:
+        crc_ccitt_table = []
+        for i in range(0, 256):
+            crc = 0
+            c = i << 8
+
+            for j in range(0, 8):
+                if (crc ^ c) & 0x8000:
+                    crc = c_ushort(crc << 1).value ^ 0x1021
+                else:
+                    crc = c_ushort(crc << 1).value
+
+                c = c_ushort(c << 1).value
+
+            crc_ccitt_table.append(crc)
+            CRC_CCITT_TABLE = crc_ccitt_table
+
+    crc_value = 0x0000 # XModem version
+
+    for c in data:
+        tmp = ((crc_value >> 8) & 0xff) ^ c
+        crc_value = ((crc_value << 8) & 0xff00) ^ CRC_CCITT_TABLE[tmp]
+
+    return crc_value
 
 
 RE_COMPRESSED = re.compile(r'[G-Zg-z]+.')
@@ -20,27 +58,105 @@ class GRFException(Exception):
     pass
 
 
+class GRFData(object):
+    def __init__(self, width, bytes=None, hex=None, bin=None):
+        self._width = width
+        self._bytes = None
+        self._hex = None
+        self._bin = None
+        if bytes:
+            self._bytes = bytes
+        elif hex:
+            self._hex = hex
+        elif bin:
+            self._bin = bin
+
+    @property
+    def filesize(self):
+        if self._bytes:
+            return len(self._bytes)
+        elif self._hex:
+            return len(self._hex) // 2
+        elif self._bin:
+            return len(self._bin) // 8
+
+    @property
+    def height(self):
+        if self._bytes:
+            return len(self.bytes_row)
+        elif self._hex:
+            return len(self.hex_row)
+        elif self._bin:
+            return len(self.bin_row)
+
+    @property
+    def width(self):
+        return self._width * 8
+
+    @property
+    def bytes_row(self):
+        return list(_chunked(self.bytes, self.width // 8))
+
+    @property
+    def hex_row(self):
+        return list(_chunked(self.hex, self.width // 4))
+
+    @property
+    def bin_row(self):
+        return list(_chunked(self.bin, self.width))
+
+    @property
+    def bytes(self):
+        if not self._bytes:
+            if self._hex:
+                self._bytes = binascii.unhexlify(self._hex)
+            elif self._bin:
+                bytes_ = []
+                for binary in _chunked(self._bin, 8):
+                    bytes_.append(bytes([int(binary, 2)]))
+                self._bytes = b''.join(bytes_)
+        return self._bytes
+
+    @property
+    def hex(self):
+        if not self._hex:
+            if self._bytes:
+                self._hex = binascii.hexlify(self._bytes).decode('ascii')
+            elif self._bin:
+                hex_ = []
+                for binary in _chunked(self._bin, 8):
+                    hex_.append('%02X' % int(binary, 2))
+                self._hex = ''.join(hex_)
+        return self._hex
+
+    @property
+    def bin(self):
+        if not self._bin:
+            if self._bytes:
+                bin_ = []
+                for byte in self._bytes:
+                    bin_.append(bin(byte)[2:].rjust(8, '0'))
+                self._bin = ''.join(bin_)
+            elif self._hex:
+                hex_ = []
+                for h in _chunked(self._hex, 2):
+                    hex_.append(bin(int(h, 16))[2:].rjust(8, '0'))
+                self._bin = ''.join(hex_)
+        return self._bin
+
+
 class GRF(object):
-    def __init__(self, filename, width, data):
+    def __init__(self, filename, data):
         if not filename or not filename.isalnum() or len(filename) > 8:
             raise GRFException('Filename must be 1-8 alphanumeric characters')
         self.filename = filename.upper()
-        self.filesize = len(data.bytes)
-        self.width = width
-        self.height = len(list(self._chunked(data, width)))
         self.data = data
 
     @staticmethod
-    def _chunked(value, n):
-        for i in range(0, len(value), n):
-            yield value[i:i+n]
-
-    @staticmethod
     def _calc_crc(data):
-        from PyCRC.CRCCCITT import CRCCCITT
         if not isinstance(data, bytes):
             data = data.encode('ascii') # Python 2 compatibility
-        return format(CRCCCITT().calculate(data), 'X')
+        return format(_calculate_crc_ccitt(data), 'X')
 
     @staticmethod
     def _normalise_zpl(zpl):
@@ -94,7 +210,7 @@ class GRF(object):
             data = base64.b64decode(data)
             if base64_compressed:
                 data = zlib.decompress(data)
-            data = BitArray(bytes=data)
+            data = GRFData(width, bytes=data)
         else:
             to_decompress = set(RE_COMPRESSED.findall(data))
             to_decompress = sorted(to_decompress, reverse=True)
@@ -125,12 +241,12 @@ class GRF(object):
                 if len(row) == width * 2:
                     rows.append(row)
                     row = ''
-            data = BitArray(hex=''.join(rows))
+            data = GRFData(width, hex=''.join(rows))
 
-        if len(data.bytes) != filesize:
+        if data.filesize != filesize:
             raise GRFException('Bad file size')
 
-        return cls(filename, width * 8, data)
+        return cls(filename, data)
 
     def to_zpl_line(self, compression=3, **kwargs):
         """
@@ -149,8 +265,7 @@ class GRF(object):
             lines = []
             last_unique_line = None
 
-            for line in self._chunked(self.data.hex, self.width // 4):
-                line = line.upper()
+            for line in self.data.hex_row:
                 if line.endswith('00'):
                     line = line.rstrip('0')
                     if len(line) % 2:
@@ -184,8 +299,8 @@ class GRF(object):
 
         zpl = '~DGR:%s.GRF,%s,%s,%s' % (
             self.filename,
-            self.filesize,
-            self.width / 8,
+            self.data.filesize,
+            self.data.width / 8,
             data
         )
 
@@ -220,22 +335,22 @@ class GRF(object):
         width = round(source.size[0] / 8.0)
 
         data = []
-        for line in cls._chunked(list(source.getdata()), source.size[0]):
+        for line in _chunked(list(source.getdata()), source.size[0]):
             row = ''.join(['0' if p else '1' for p in line])
             row = row.ljust(width, '0')
             data.append(row)
-        data = BitArray(bin=''.join(data))
+        data = GRFData(width, bin=''.join(data))
 
-        return cls(filename, width * 8, data)
+        return cls(filename, data)
 
     def to_image(self):
         from PIL import Image
 
-        image = Image.new('1', (self.width, self.height))
+        image = Image.new('1', (self.data.width, self.data.height))
         pixels = image.load()
 
         y = 0
-        for line in self._chunked(self.data.bin, self.width):
+        for line in self.data.bin_row:
             x = 0
             for bit in line:
                 pixels[(x,y)] = 1 - int(bit)
@@ -306,17 +421,15 @@ class GRF(object):
         return [''.join(d) for d in data]
 
     def optimise_barcodes(self, **kwargs):
-        data = list(self._chunked(self.data.bin, self.width))
-
         # Optimise vertical barcodes
-        data = self._optimise_barcodes(data, **kwargs)
+        data = self._optimise_barcodes(self.data.bin_row, **kwargs)
 
         # Optimise horizontal barcodes
         data = self._rotate_data(data, True)
         data = self._optimise_barcodes(data, **kwargs)
         data = self._rotate_data(data, False)
 
-        self.data = BitArray(bin=''.join(data))
+        self.data = GRFData(self.data.width // 8, bin=''.join(data))
 
     def _optimise_barcodes(
         self, data, min_bar_height=20, min_bar_count=100, max_gap_size=30,
