@@ -5,6 +5,7 @@ import binascii
 from ctypes import c_ushort
 from io import BytesIO
 import os
+import struct
 from subprocess import Popen, PIPE
 import re
 import zlib
@@ -92,26 +93,26 @@ class GRFData(object):
     @property
     def height(self):
         if self._bytes:
-            return len(self.bytes_row)
+            return len(self.bytes_rows)
         elif self._hex:
-            return len(self.hex_row)
+            return len(self.hex_rows)
         elif self._bin:
-            return len(self.bin_row)
+            return len(self.bin_rows)
 
     @property
     def width(self):
         return self._width * 8
 
     @property
-    def bytes_row(self):
+    def bytes_rows(self):
         return list(_chunked(self.bytes, self._width))
 
     @property
-    def hex_row(self):
+    def hex_rows(self):
         return list(_chunked(self.hex, self._width * 2))
 
     @property
-    def bin_row(self):
+    def bin_rows(self):
         return list(_chunked(self.bin, self._width * 8))
 
     @property
@@ -122,7 +123,7 @@ class GRFData(object):
             elif self._bin:
                 bytes_ = []
                 for binary in _chunked(self._bin, 8):
-                    bytes_.append(bytes([int(binary, 2)]))
+                    bytes_.append(struct.pack('B', int(binary, 2)))
                 self._bytes = b''.join(bytes_)
         return self._bytes
 
@@ -130,7 +131,8 @@ class GRFData(object):
     def hex(self):
         if not self._hex:
             if self._bytes:
-                self._hex = binascii.hexlify(self._bytes).decode('ascii')
+                hex_ = binascii.hexlify(self._bytes).decode('ascii')
+                self._hex = hex_.upper()
             elif self._bin:
                 hex_ = []
                 for binary in _chunked(self._bin, 8):
@@ -165,7 +167,7 @@ class GRF(object):
 
     @staticmethod
     def _calc_crc(data):
-        return format(_calculate_crc_ccitt(data), 'X')
+        return '%04X' % _calculate_crc_ccitt(data)
 
     @staticmethod
     def _normalise_zpl(zpl):
@@ -275,7 +277,7 @@ class GRF(object):
             lines = []
             last_unique_line = None
 
-            for line in self.data.hex_row:
+            for line in self.data.hex_rows:
                 if line.endswith('00'):
                     line = line.rstrip('0')
                     if len(line) % 2:
@@ -329,7 +331,7 @@ class GRF(object):
             '^FO0,0', # Field Origin to 0,0
             '^XGR:%s.GRF,1,1' % self.filename, # Draw image
             '^FS', # Field Separator
-            'PQ%s,%s,0,%s' % (
+            '^PQ%s,%s,0,%s' % (
                 int(quantity), # Print Quantity
                 int(pause_and_cut), # Pause and cut every N labels
                 'Y' if override_pause else 'N' # Don't pause between cuts
@@ -367,7 +369,7 @@ class GRF(object):
         pixels = image.load()
 
         y = 0
-        for line in self.data.bin_row:
+        for line in self.data.bin_rows:
             x = 0
             for bit in line:
                 pixels[(x,y)] = 1 - int(bit)
@@ -443,7 +445,7 @@ class GRF(object):
 
     def optimise_barcodes(self, **kwargs):
         # Optimise vertical barcodes
-        data = self._optimise_barcodes(self.data.bin_row, **kwargs)
+        data = self._optimise_barcodes(self.data.bin_rows, **kwargs)
 
         # Optimise horizontal barcodes
         data = self._rotate_data(data, True)
