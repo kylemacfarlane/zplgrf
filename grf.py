@@ -16,6 +16,14 @@ def _chunked(value, n):
         yield value[i:i+n]
 
 
+def _is_string(value):
+    # Python 2 compatibility
+    try:
+        return isinstance(value, basestring)
+    except NameError:
+        return False
+
+
 CRC_CCITT_TABLE = None
 
 def _calculate_crc_ccitt(data):
@@ -40,7 +48,7 @@ def _calculate_crc_ccitt(data):
             crc_ccitt_table.append(crc)
             CRC_CCITT_TABLE = crc_ccitt_table
 
-    is_string = isinstance(data, basestring) # Python 2 compatibility
+    is_string = _is_string(data)
     crc_value = 0x0000 # XModem version
 
     for c in data:
@@ -136,7 +144,7 @@ class GRFData(object):
         if not self._bin:
             if self._bytes:
                 bin_ = []
-                is_string = isinstance(self._bytes, basestring) # Python 2
+                is_string = _is_string(self._bytes)
                 for byte in self._bytes:
                     byte = ord(byte) if is_string else byte
                     bin_.append(bin(byte)[2:].rjust(8, '0'))
