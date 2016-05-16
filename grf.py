@@ -7,7 +7,6 @@ from io import BytesIO
 import os
 from subprocess import Popen, PIPE
 import re
-import sys
 import zlib
 
 
@@ -317,7 +316,9 @@ class GRF(object):
 
         return zpl
 
-    def to_zpl(self, **kwargs):
+    def to_zpl(
+        self, quantity=1, pause_and_cut=0, override_pause=False, **kwargs
+    ):
         """
         The most basic ZPL to print the GRF. Since ZPL printers are stateful
         this may not work and you may need to build your own.
@@ -328,6 +329,11 @@ class GRF(object):
             '^FO0,0', # Field Origin to 0,0
             '^XGR:%s.GRF,1,1' % self.filename, # Draw image
             '^FS', # Field Separator
+            'PQ%s,%s,0,%s' % (
+                int(quantity), # Print Quantity
+                int(pause_and_cut), # Pause and cut every N labels
+                'Y' if override_pause else 'N' # Don't pause between cuts
+            ),
             '^XZ', # End Label Format
             '^IDR:%s.GRF' % self.filename # Delete image from printer
         ]
@@ -372,10 +378,8 @@ class GRF(object):
 
     @classmethod
     def from_pdf(
-        cls, pdf, filename,
-        width=288, height=432,
-        width_dpi=203, height_dpi=203,
-        orientation=0
+        cls, pdf, filename, width=288, height=432, dpi=203,
+        orientation=0, font_path=None
     ):
         """
         Filename is 1-8 alphanumeric characters to identify the GRF in ZPL.
@@ -407,12 +411,18 @@ class GRF(object):
             '-sstdout=%stderr',
             '-sOutputFile=%stdout',
             '-dAdvanceDistance=1000',
-            '-r%sx%s' % (int(height_dpi), int(width_dpi)),
+            '-r%s' % int(dpi),
             '-dDEVICEWIDTHPOINTS=%s' % int(width),
             '-dDEVICEHEIGHTPOINTS=%s' % int(height),
             '-dPDFFitPage',
             '-c',
             '<<%s>>setpagedevice' % ' '.join(setpagedevice),
+        ]
+
+        if font_path and os.path.exists(font_path):
+            cmd += ['-I' + font_path]
+
+        cmd += [
             '-f',
             '-'
         ]
@@ -523,11 +533,3 @@ class GRF(object):
                 data[i] = line
 
         return data
-
-
-if __name__ == '__main__':
-    cmd = os.path.join(os.path.dirname(sys.argv[0]), 'rastertolabel')
-    p = Popen([cmd] + sys.argv[1:], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    stdin = getattr(sys.stdin, 'buffer', sys.stdin) # Python 2 compatibility
-    stdout, stderr = p.communicate(stdin.read())
-    sys.stdout.write(GRF.replace_grfs_in_zpl(stdout.decode('ascii')))
