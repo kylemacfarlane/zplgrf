@@ -40,10 +40,12 @@ def _calculate_crc_ccitt(data):
             crc_ccitt_table.append(crc)
             CRC_CCITT_TABLE = crc_ccitt_table
 
+    is_string = isinstance(data, str) # Python 2 compatibility
     crc_value = 0x0000 # XModem version
 
     for c in data:
-        tmp = ((crc_value >> 8) & 0xff) ^ c
+        d = ord(c) if is_string else c
+        tmp = ((crc_value >> 8) & 0xff) ^ d
         crc_value = ((crc_value << 8) & 0xff00) ^ CRC_CCITT_TABLE[tmp]
 
     return crc_value
@@ -154,8 +156,6 @@ class GRF(object):
 
     @staticmethod
     def _calc_crc(data):
-        if not isinstance(data, bytes):
-            data = data.encode('ascii') # Python 2 compatibility
         return format(_calculate_crc_ccitt(data), 'X')
 
     @staticmethod
@@ -332,7 +332,7 @@ class GRF(object):
 
         source = Image.open(BytesIO(png))
         source = source.convert('1')
-        width = round(source.size[0] / 8.0)
+        width = int(round(source.size[0] / 8.0))
 
         data = []
         for line in _chunked(list(source.getdata()), source.size[0]):
