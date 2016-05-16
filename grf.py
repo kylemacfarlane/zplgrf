@@ -97,15 +97,15 @@ class GRFData(object):
 
     @property
     def bytes_row(self):
-        return list(_chunked(self.bytes, self.width // 8))
+        return list(_chunked(self.bytes, self._width))
 
     @property
     def hex_row(self):
-        return list(_chunked(self.hex, self.width // 4))
+        return list(_chunked(self.hex, self._width * 2))
 
     @property
     def bin_row(self):
-        return list(_chunked(self.bin, self.width))
+        return list(_chunked(self.bin, self._width * 8))
 
     @property
     def bytes(self):
@@ -337,7 +337,7 @@ class GRF(object):
         data = []
         for line in _chunked(list(source.getdata()), source.size[0]):
             row = ''.join(['0' if p else '1' for p in line])
-            row = row.ljust(width, '0')
+            row = row.ljust(width * 8, '0')
             data.append(row)
         data = GRFData(width, bin=''.join(data))
 
