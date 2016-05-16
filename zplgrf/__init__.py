@@ -1,10 +1,9 @@
-#!/usr/bin/env python
-
 import base64
 import binascii
 from ctypes import c_ushort
 from io import BytesIO
 import os
+from PIL import Image
 import struct
 from subprocess import Popen, PIPE
 import re
@@ -312,7 +311,7 @@ class GRF(object):
         zpl = '~DGR:%s.GRF,%s,%s,%s' % (
             self.filename,
             self.data.filesize,
-            self.data.width / 8,
+            self.data.width // 8,
             data
         )
 
@@ -347,8 +346,6 @@ class GRF(object):
         Filename is 1-8 alphanumeric characters to identify the GRF in ZPL.
         """
 
-        from PIL import Image
-
         source = Image.open(BytesIO(image))
         source = source.convert('1')
         width = int(round(source.size[0] / 8.0))
@@ -363,8 +360,6 @@ class GRF(object):
         return cls(filename, data)
 
     def to_image(self):
-        from PIL import Image
-
         image = Image.new('1', (self.data.width, self.data.height))
         pixels = image.load()
 

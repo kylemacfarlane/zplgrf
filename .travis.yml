@@ -1,0 +1,17 @@
+language: python
+sudo: false
+addons:
+    apt:
+        packages:
+        - ghostscript
+env:
+    - TOXENV=py27
+    - TOXENV=py33
+    - TOXENV=py34
+    - TOXENV=py35
+install:
+    - travis_retry pip install tox
+script:
+    - tox
+notifications:
+    email: false
