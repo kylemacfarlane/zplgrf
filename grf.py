@@ -40,7 +40,7 @@ def _calculate_crc_ccitt(data):
             crc_ccitt_table.append(crc)
             CRC_CCITT_TABLE = crc_ccitt_table
 
-    is_string = isinstance(data, str) # Python 2 compatibility
+    is_string = isinstance(data, basestring) # Python 2 compatibility
     crc_value = 0x0000 # XModem version
 
     for c in data:
@@ -136,7 +136,9 @@ class GRFData(object):
         if not self._bin:
             if self._bytes:
                 bin_ = []
+                is_string = isinstance(self._bytes, basestring) # Python 2
                 for byte in self._bytes:
+                    byte = ord(byte) if is_string else byte
                     bin_.append(bin(byte)[2:].rjust(8, '0'))
                 self._bin = ''.join(bin_)
             elif self._hex:
@@ -210,7 +212,6 @@ class GRF(object):
             data = base64.b64decode(data)
             if base64_compressed:
                 data = zlib.decompress(data)
-            data = GRFData(width, bytes=data)
         else:
             to_decompress = set(RE_COMPRESSED.findall(data))
             to_decompress = sorted(to_decompress, reverse=True)
@@ -239,9 +240,11 @@ class GRF(object):
                 else:
                     row += c
                 if len(row) == width * 2:
-                    rows.append(row)
+                    rows.append(binascii.unhexlify(row))
                     row = ''
-            data = GRFData(width, hex=''.join(rows))
+            data = b''.join(rows)
+
+        data = GRFData(width, bytes=data)
 
         if data.filesize != filesize:
             raise GRFException('Bad file size')
@@ -323,14 +326,14 @@ class GRF(object):
         return ''.join(zpl)
 
     @classmethod
-    def from_image(cls, png, filename):
+    def from_image(cls, image, filename):
         """
         Filename is 1-8 alphanumeric characters to identify the GRF in ZPL.
         """
 
         from PIL import Image
 
-        source = Image.open(BytesIO(png))
+        source = Image.open(BytesIO(image))
         source = source.convert('1')
         width = int(round(source.size[0] / 8.0))
 
