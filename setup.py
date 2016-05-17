@@ -1,19 +1,26 @@
-from setuptools import setup
+import os
+from setuptools import find_packages, setup
 
+
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
     name='zplgrf',
     version = '1.0',
     description = 'Tools to work with ZPL GRF images and CUPS',
+    long_description = read('README.rst'),
     author = 'Kyle MacFarlane',
     author_email = 'kyle@deletethetrees.com',
     url = 'https://github.com/kylemacfarlane/zplgrf',
-    packages = ['zplgrf'],
+
+    packages = find_packages('src'),
+    package_dir = {'': 'src'},
     install_requires = [
         'setuptools',
         'pillow'
     ],
-    test_suite='tests',
+    test_suite='zplgrf.tests',
     classifiers = [
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
