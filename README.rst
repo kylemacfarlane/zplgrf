@@ -1,3 +1,8 @@
+.. image:: https://travis-ci.org/kylemacfarlane/zplgrf.svg?branch=master
+    :target: https://travis-ci.org/kylemacfarlane/zplgrf
+.. image:: https://coveralls.io/repos/github/kylemacfarlane/zplgrf/badge.svg?branch=master
+    :target: https://coveralls.io/github/kylemacfarlane/zplgrf?branch=master
+
 ======
 zplgrf
 ======

@@ -41,7 +41,7 @@ class TestStringMethods(unittest.TestCase):
         self._compare(grf.to_zpl(compression=2), 'pdf-optimised-asciihex.zpl')
         self._compare(grf.to_zpl(compression=3), 'pdf-optimised-zb64.zpl')
 
-    def zpl_to_image(self):
+    def test_zpl_to_image(self):
         grf = GRF.from_zpl(self._read_file('pdf-asciihex.zpl'))[0]
         output = BytesIO()
         grf.to_image().save(output, 'PNG')
