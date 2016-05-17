@@ -502,24 +502,8 @@ class GRF(object):
                 barcode.append(line[span[0]])
             barcode = ''.join(barcode)
 
-            if '101' in barcode:
-                # This barcode has 1px wide white bars which need widening.
-                barcode = barcode.replace('110', '100')
-                if '101' in barcode:
-                    # There's still a narrow white bar, e.g. 0101
-                    original_length = len(barcode)
-                    barcode = barcode.replace('101', '1001')
-
-                    # Now we need to shorten the barcode by sacrificing from
-                    # wide bars. This might break the barcode.
-                    longest = None
-                    while len(barcode) > original_length:
-                        if not longest or longest not in barcode:
-                            longest = RE_BINARY_SPLIT.findall(barcode)
-                            longest = [l[0] for l in longest]
-                            longest.sort(reverse=True)
-                            longest = longest[0]
-                        barcode = barcode.replace(longest, longest[:-1], 1)
+            # Do the actual optimisation
+            barcode = self._optimise_barcode(barcode)
 
             barcode = list(barcode)
             barcode.reverse()
@@ -530,3 +514,28 @@ class GRF(object):
                 data[i] = line
 
         return data
+
+    def _optimise_barcode(self, barcode):
+        if '101' not in barcode:
+            # This barcode doesn't have any 1px white bars so is probably OK.
+            return barcode
+
+        barcode = barcode.replace('110', '100')
+
+        if '101' in barcode:
+            # There's still a narrow white bar, e.g. 0101
+            original_length = len(barcode)
+            barcode = barcode.replace('101', '1001')
+
+            # Now we need to shorten the barcode by sacrificing from
+            # wide bars. This might break the barcode.
+            longest = None
+            while len(barcode) > original_length:
+                if not longest or longest not in barcode:
+                    longest = RE_BINARY_SPLIT.findall(barcode)
+                    longest = [l[0] for l in longest]
+                    longest.sort(reverse=True)
+                    longest = longest[0]
+                barcode = barcode.replace(longest, longest[:-1], 1)
+
+        return barcode
