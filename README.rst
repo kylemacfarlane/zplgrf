@@ -20,7 +20,7 @@ In the end I opted for getting a mono image from Ghostscript and then searching 
 Installation
 ============
 
-Run `pip install zplgrf`.
+Run ``pip install zplgrf``.
 
 
 Dependencies
@@ -54,7 +54,7 @@ Or you could open an image instead::
     print(grf.to_zpl(compression=3, quantity=1)) # Some random options
 
 
-If the ZPL won't print it's possible that your printer doesn't support ZB64 encoded images so try `compression=2` instead.
+If the ZPL won't print it's possible that your printer doesn't support ZB64 encoded images so try ``compression=2`` instead.
 
 Extract all GRFs from ZPL and save them as PNGs::
 
@@ -74,21 +74,21 @@ Optimise all barcodes in a ZPL file::
         print(GRF.replace_grfs_in_zpl(zpl.read()))
 
 
-Arguments for the various methods are documented in the source. Some such as `to_zpl` and `optimise_barcodes` have quite a few arguments that may need tweaking for your purposes.
+Arguments for the various methods are documented in the source. Some such as ``to_zpl`` and ``optimise_barcodes`` have quite a few arguments that may need tweaking for your purposes.
 
 
 Using the CUPS Filter
 =====================
 
-Install the package normally and then copy `cupsfilters/pdftozpl` to your CUPS filter directory which is usually `/usr/lib/cups/filter`. Make sure that the copied file has the same permissions as the other filters in the folder. Note that `pdftozpl` is actually just a Python script and can be easily edited to change any settings.
+Install the package normally and then copy ``cupsfilters/pdftozpl`` to your CUPS filter directory which is usually ``/usr/lib/cups/filter``. Make sure that the copied file has the same permissions as the other filters in the folder. Note that ``pdftozpl`` is actually just a Python script and can be easily edited to change any settings.
 
-Now edit the PPD file for your printer which is usually in `/etc/cups/ppd`. Find the lines containing `*cupsFilter` and add the following below them::
+Now edit the PPD file for your printer which is usually in ``/etc/cups/ppd``. Find the lines containing ``*cupsFilter`` and add the following below them::
 
 
     *cupsFilter2: "application/pdf application/octet-stream 50 pdftozpl"
 
 
-Now restart CUPS and this new filter will take affect. Note that `*cupsFilter2` filters require CUPS 1.5+ and disable regular `*cupsFilter` filters so you may need to setup more filters for other mimetypes.
+Now restart CUPS and this new filter will take affect. Note that ``*cupsFilter2`` filters require CUPS 1.5+ and disable regular ``*cupsFilter`` filters so you may need to setup more filters for other mimetypes.
 
 
 Performance
