@@ -13,6 +13,7 @@ setup(
     author = 'Kyle MacFarlane',
     author_email = 'kyle@deletethetrees.com',
     url = 'https://github.com/kylemacfarlane/zplgrf',
+    license='GPLv3',
 
     packages = find_packages('src'),
     package_dir = {'': 'src'},

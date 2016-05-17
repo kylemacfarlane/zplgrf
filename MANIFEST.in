@@ -1,5 +1,4 @@
 include .travis.yml
 include LICENSE
 include pdftozpl
-include tox.ini
 include src/zplgrf/tests/input/*
