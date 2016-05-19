@@ -15,8 +15,6 @@ options = {
 for option in sys.argv[5].split(' '):
     if option.startswith('Resolution='):
         options['dpi'] = option[11:-3]
-    elif option.startswith('orientation-requested'):
-        options['orientation'] = option[-1]
     elif option.startswith('PageSize='):
         options['height'], options['width'] = option[10:].split('h')
 
