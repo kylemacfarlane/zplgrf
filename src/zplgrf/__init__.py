@@ -393,7 +393,7 @@ class GRF(object):
             3 = landscape
 
         Using center of pixel will improve barcode quality but may decrease
-        font quality.
+        the quality of some text.
         """
 
         # Most arguments below are based on what CUPS uses
