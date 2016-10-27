@@ -61,3 +61,11 @@ class TestStringMethods(unittest.TestCase):
         grf.optimise_barcodes()
         grf.to_image().save(output, 'PNG')
         self._compare(output.getvalue(), 'pdf-optimised-image.png')
+
+    def test_ghostscript_center_of_pixel(self):
+        grf = GRF.from_pdf(
+            self._read_file('pdf.pdf'), 'TEST', center_of_pixel=True
+        )[0]
+        output = BytesIO()
+        grf.to_image().save(output, 'PNG')
+        self._compare(output.getvalue(), 'pdf-image-centerofpixel.png')

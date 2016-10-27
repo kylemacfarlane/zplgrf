@@ -378,7 +378,7 @@ class GRF(object):
     @classmethod
     def from_pdf(
         cls, pdf, filename, width=288, height=432, dpi=203,
-        orientation=0, font_path=None
+        orientation=0, font_path=None, center_of_pixel=False
     ):
         """
         Filename is 1-8 alphanumeric characters to identify the GRF in ZPL.
@@ -391,6 +391,9 @@ class GRF(object):
             1 = seascape
             2 = upside down
             3 = landscape
+
+        Using center of pixel will improve barcode quality but may decrease
+        font quality.
         """
 
         # Most arguments below are based on what CUPS uses
@@ -417,6 +420,9 @@ class GRF(object):
             '-c',
             '<<%s>>setpagedevice' % ' '.join(setpagedevice),
         ]
+
+        if center_of_pixel:
+            cmd += ['0 .setfilladjust']
 
         if font_path and os.path.exists(font_path):
             cmd += ['-I' + font_path]
