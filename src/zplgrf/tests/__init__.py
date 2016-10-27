@@ -15,7 +15,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(a, self._read_file(b))
 
     def test_pdf_to_image(self):
-        grf = GRF.from_pdf(self._read_file('pdf.pdf'), 'TEST')
+        grf = GRF.from_pdf(self._read_file('pdf.pdf'), 'TEST')[0]
 
         output = BytesIO()
         grf.to_image().save(output, 'PNG')
@@ -25,6 +25,16 @@ class TestStringMethods(unittest.TestCase):
         grf.optimise_barcodes()
         grf.to_image().save(output, 'PNG')
         self._compare(output.getvalue(), 'pdf-optimised-image.png')
+
+    def test_pdf_to_image_multiple_pages(self):
+        grfs = GRF.from_pdf(self._read_file('pdf-2pages.pdf'), 'TEST')
+
+        self.assertEqual(len(grfs), 2)
+
+        for i, grf in enumerate(grfs):
+            output = BytesIO()
+            grf.to_image().save(output, 'PNG')
+            self._compare(output.getvalue(), 'pdf-2pages-%i.png' % i)
 
     def test_image_to_zpl(self):
         grf = GRF.from_image(self._read_file('pdf-image.png'), 'TEST')

@@ -428,7 +428,14 @@ class GRF(object):
         stdout, stderr = p.communicate(pdf)
         if stderr:
             raise GRFException(stderr)
-        return cls.from_image(stdout, filename)
+
+        # This is what PIL uses to identify PNGs
+        png_start = b'\211PNG\r\n\032\n'
+
+        grfs = []
+        for png in stdout.split(png_start)[1:]:
+            grfs.append(cls.from_image(png_start + png, filename))
+        return grfs
 
     def _rotate_data(self, data, clockwise=True):
         data = [list(d) for d in data]
