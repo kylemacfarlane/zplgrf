@@ -2,6 +2,7 @@ import base64
 import binascii
 from ctypes import c_ushort
 from io import BytesIO
+import math
 import os
 from PIL import Image
 import struct
@@ -350,7 +351,7 @@ class GRF(object):
 
         source = Image.open(BytesIO(image))
         source = source.convert('1')
-        width = int(round(source.size[0] / 8.0))
+        width = int(math.ceil(source.size[0] / 8.0))
 
         data = []
         for line in _chunked(list(source.getdata()), source.size[0]):
@@ -377,20 +378,14 @@ class GRF(object):
 
     @classmethod
     def from_pdf(
-        cls, pdf, filename, width=288, height=432, dpi=203,
-        orientation=0, font_path=None, center_of_pixel=False
+        cls, pdf, filename, width=288, height=432, dpi=203, font_path=None,
+        center_of_pixel=False
     ):
         """
         Filename is 1-8 alphanumeric characters to identify the GRF in ZPL.
 
         Dimensions and DPI are for a typical 4"x6" shipping label.
         E.g. 432 points / 72 points in an inch / 203 dpi = 6 inches
-
-        Orientation (may not work in older versions of Ghostscript):
-            0 = portrait
-            1 = seascape
-            2 = upside down
-            3 = landscape
 
         Using center of pixel will improve barcode quality but may decrease
         the quality of some text.
@@ -399,8 +394,7 @@ class GRF(object):
         # Most arguments below are based on what CUPS uses
         setpagedevice = [
             '/.HWMargins[0.000000 0.000000 0.000000 0.000000]',
-            '/Margins[0 0]',
-            '/Orientation %s' % int(orientation)
+            '/Margins[0 0]'
         ]
         cmd = [
             'gs',
@@ -416,9 +410,10 @@ class GRF(object):
             '-r%s' % int(dpi),
             '-dDEVICEWIDTHPOINTS=%s' % int(width),
             '-dDEVICEHEIGHTPOINTS=%s' % int(height),
+            '-dFIXEDMEDIA',
             '-dPDFFitPage',
             '-c',
-            '<<%s>>setpagedevice' % ' '.join(setpagedevice),
+            '<<%s>>setpagedevice' % ' '.join(setpagedevice)
         ]
 
         if center_of_pixel:

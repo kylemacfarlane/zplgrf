@@ -36,6 +36,12 @@ class TestStringMethods(unittest.TestCase):
             grf.to_image().save(output, 'PNG')
             self._compare(output.getvalue(), 'pdf-2pages-%i.png' % i)
 
+    def test_pdf_landscape(self):
+        grf = GRF.from_pdf(self._read_file('pdf-landscape.pdf'), 'TEST')[0]
+        output = BytesIO()
+        grf.to_image().save(output, 'PNG')
+        self._compare(output.getvalue(), 'pdf-landscape.png')
+
     def test_image_to_zpl(self):
         grf = GRF.from_image(self._read_file('pdf-image.png'), 'TEST')
         grf.optimise_barcodes()
