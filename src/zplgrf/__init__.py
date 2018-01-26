@@ -444,10 +444,13 @@ class GRF(object):
                  tempfile.NamedTemporaryFile() as out_file:
 
                 in_file.write(pdf)
+                in_file.flush()
 
                 # Ghostscript seems to be sensitive to argument order
                 cmd[13:13] += [
-                    '-sOutputFile=%s' % out_file.name,
+                    '-sOutputFile=%s' % out_file.name
+                ]
+                cmd += [
                     '-f', in_file.name
                 ]
 
@@ -462,6 +465,8 @@ class GRF(object):
             cmd[13:13] += [
                 '-sstdout=%stderr',
                 '-sOutputFile=%stdout',
+            ]
+            cmd += [
                 '-f', '-'
             ]
             p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
