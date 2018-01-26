@@ -12,6 +12,7 @@ before_install:
     - ./configure --prefix=/usr
     - sudo make soinstall
     - sudo ldconfig
+    - cd ..
 install:
     - pip install Pillow coveralls ghostscript
 script:
