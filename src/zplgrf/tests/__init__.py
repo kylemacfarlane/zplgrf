@@ -1,6 +1,7 @@
-from io import BytesIO
 import os
 import unittest
+from io import BytesIO
+
 from zplgrf import GRF
 
 
@@ -71,6 +72,26 @@ class TestStringMethods(unittest.TestCase):
     def test_ghostscript_center_of_pixel(self):
         grf = GRF.from_pdf(
             self._read_file('pdf.pdf'), 'TEST', center_of_pixel=True
+        )[0]
+        output = BytesIO()
+        grf.to_image().save(output, 'PNG')
+        self._compare(output.getvalue(), 'pdf-image-centerofpixel.png')
+
+    def test_pdf_to_image_using_bindings(self):
+        grfs = GRF.from_pdf(
+            self._read_file('pdf-2pages.pdf'), 'TEST', use_bindings=True
+        )
+
+        self.assertEqual(len(grfs), 2)
+
+        for i, grf in enumerate(grfs):
+            output = BytesIO()
+            grf.to_image().save(output, 'PNG')
+            self._compare(output.getvalue(), 'pdf-2pages-%i.png' % i)
+
+        grf = GRF.from_pdf(
+            self._read_file('pdf.pdf'), 'TEST', center_of_pixel=True,
+            use_bindings=True
         )[0]
         output = BytesIO()
         grf.to_image().save(output, 'PNG')

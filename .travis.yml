@@ -4,13 +4,16 @@ python:
     - 3.3
     - 3.4
     - 3.5
+    - 3.6
 before_install:
-    - wget https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs919/ghostscript-9.19-linux-x86_64.tgz
-    - tar -xvf ghostscript-9.19-linux-x86_64.tgz
-    - mv ghostscript-9.19-linux-x86_64/gs-919-linux_x86_64 ghostscript-9.19-linux-x86_64/gs
-    - export PATH=$PWD/ghostscript-9.19-linux-x86_64:$PATH
+    - wget https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs922/ghostscript-9.22.tar.gz
+    - tar -xvf ghostscript-9.22.tar.gz
+    - cd ghostscript-9.22.tar.gz
+    - ./configure --prefix=/usr
+    - sudo make soinstall
+    - sudo ldconfig
 install:
-    - pip install Pillow coveralls
+    - pip install Pillow coveralls ghostscript
 script:
     - python setup.py test
     - coverage run --source=zplgrf setup.py test

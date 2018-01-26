@@ -1,14 +1,17 @@
 import base64
 import binascii
-from ctypes import c_ushort
-from io import BytesIO
 import math
 import os
-from PIL import Image
-import struct
-from subprocess import Popen, PIPE
 import re
+import struct
+import tempfile
 import zlib
+from ctypes import c_ushort
+from io import BytesIO
+from subprocess import PIPE, Popen
+
+import ghostscript
+from PIL import Image
 
 
 def _chunked(value, n):
@@ -25,6 +28,7 @@ def _is_string(value):
 
 
 CRC_CCITT_TABLE = None
+
 
 def _calculate_crc_ccitt(data):
     """
@@ -49,7 +53,7 @@ def _calculate_crc_ccitt(data):
             CRC_CCITT_TABLE = crc_ccitt_table
 
     is_string = _is_string(data)
-    crc_value = 0x0000 # XModem version
+    crc_value = 0x0000  # XModem version
 
     for c in data:
         d = ord(c) if is_string else c
@@ -327,19 +331,19 @@ class GRF(object):
         this may not work and you may need to build your own.
         """
         zpl = [
-            self.to_zpl_line(**kwargs), # Download image to printer
-            '^XA', # Start Label Format
+            self.to_zpl_line(**kwargs),  # Download image to printer
+            '^XA',  # Start Label Format
             '^MM%s,Y' % print_mode,
-            '^FO0,0', # Field Origin to 0,0
-            '^XGR:%s.GRF,1,1' % self.filename, # Draw image
-            '^FS', # Field Separator
+            '^FO0,0',  # Field Origin to 0,0
+            '^XGR:%s.GRF,1,1' % self.filename,  # Draw image
+            '^FS',  # Field Separator
             '^PQ%s,%s,0,%s' % (
-                int(quantity), # Print Quantity
-                int(pause_and_cut), # Pause and cut every N labels
-                'Y' if override_pause else 'N' # Don't pause between cuts
+                int(quantity),  # Print Quantity
+                int(pause_and_cut),  # Pause and cut every N labels
+                'Y' if override_pause else 'N'  # Don't pause between cuts
             ),
-            '^XZ', # End Label Format
-            '^IDR:%s.GRF' % self.filename # Delete image from printer
+            '^XZ',  # End Label Format
+            '^IDR:%s.GRF' % self.filename  # Delete image from printer
         ]
         return ''.join(zpl)
 
@@ -370,7 +374,7 @@ class GRF(object):
         for line in self.data.bin_rows:
             x = 0
             for bit in line:
-                pixels[(x,y)] = 1 - int(bit)
+                pixels[(x, y)] = 1 - int(bit)
                 x += 1
             y += 1
 
@@ -379,7 +383,7 @@ class GRF(object):
     @classmethod
     def from_pdf(
         cls, pdf, filename, width=288, height=432, dpi=203, font_path=None,
-        center_of_pixel=False
+        center_of_pixel=False, use_bindings=False
     ):
         """
         Filename is 1-8 alphanumeric characters to identify the GRF in ZPL.
@@ -389,6 +393,18 @@ class GRF(object):
 
         Using center of pixel will improve barcode quality but may decrease
         the quality of some text.
+
+        use_bindings=False:
+            - Uses subprocess.Popen
+            - Forks so there is a memory spike
+            - Easier to setup - only needs the gs binary
+
+        use_bindings=True:
+            - Uses python-ghostscript
+            - Doesn't fork so should use less memory
+            - python-ghostscript is a bit buggy
+            - May be harder to setup - even if you have updated the gs binary
+              there may stil be old libgs* files on your system
         """
 
         # Most arguments below are based on what CUPS uses
@@ -396,6 +412,7 @@ class GRF(object):
             '/.HWMargins[0.000000 0.000000 0.000000 0.000000]',
             '/Margins[0 0]'
         ]
+
         cmd = [
             'gs',
             '-dQUIET',
@@ -404,8 +421,6 @@ class GRF(object):
             '-dBATCH',
             '-dNOINTERPOLATE',
             '-sDEVICE=pngmono',
-            '-sstdout=%stderr',
-            '-sOutputFile=%stdout',
             '-dAdvanceDistance=1000',
             '-r%s' % int(dpi),
             '-dDEVICEWIDTHPOINTS=%s' % int(width),
@@ -422,21 +437,43 @@ class GRF(object):
         if font_path and os.path.exists(font_path):
             cmd += ['-I' + font_path]
 
-        cmd += [
-            '-f',
-            '-'
-        ]
+        if use_bindings:
+            # python-ghostscript doesn't like reading/writing from
+            # stdin/stdout so we need to use temp files
+            with tempfile.NamedTemporaryFile() as in_file, \
+                 tempfile.NamedTemporaryFile() as out_file:
 
-        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = p.communicate(pdf)
-        if stderr:
-            raise GRFException(stderr)
+                in_file.write(pdf)
+
+                # Ghostscript seems to be sensitive to argument order
+                cmd[13:13] += [
+                    '-sOutputFile=%s' % out_file.name,
+                    '-f', in_file.name
+                ]
+
+                try:
+                    ghostscript.Ghostscript(*[c.encode('ascii') for c in cmd])
+                except Exception as e:
+                    raise GRFException(e)
+
+                pngs = out_file.read()
+        else:
+            # Ghostscript seems to be sensitive to argument order
+            cmd[13:13] += [
+                '-sstdout=%stderr',
+                '-sOutputFile=%stdout',
+                '-f', '-'
+            ]
+            p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            pngs, stderr = p.communicate(pdf)
+            if stderr:
+                raise GRFException(stderr)
 
         # This is what PIL uses to identify PNGs
         png_start = b'\211PNG\r\n\032\n'
 
         grfs = []
-        for png in stdout.split(png_start)[1:]:
+        for png in pngs.split(png_start)[1:]:
             grfs.append(cls.from_image(png_start + png, filename))
         return grfs
 
@@ -472,10 +509,10 @@ class GRF(object):
         max_gap_size      = Biggest white gap in px allowed between black bars.
                             This is only important if you have multiple
                             barcodes next to each other.
-        min_percent_white = Minimum percentage of white bars between black bars.
-                            This helps to ignore solid rectangles.
-        max_percent_white = Maximum percentage of white bars between black bars.
-                            This helps to ignore solid rectangles.
+        min_percent_white = Minimum percentage of white bars between black
+                            bars. This helps to ignore solid rectangles.
+        max_percent_white = Maximum percentage of white bars between black
+                            bars. This helps to ignore solid rectangles.
         """
 
         re_bars = re.compile(r'1{%s,}' % min_bar_height)
@@ -520,7 +557,9 @@ class GRF(object):
             width = span[1] - span[0]
             for i in range(seen_at[0], seen_at[-1]+1):
                 line = data[i]
-                line = line[:span[0]] + (barcode.pop() * width) + line[span[1]:]
+                line = (
+                    line[:span[0]] + (barcode.pop() * width) + line[span[1]:]
+                )
                 data[i] = line
 
         return data
