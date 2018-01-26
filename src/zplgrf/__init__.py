@@ -324,7 +324,7 @@ class GRF(object):
 
     def to_zpl(
         self, quantity=1, pause_and_cut=0, override_pause=False,
-        print_mode='C', **kwargs
+        print_mode='C', print_orientation='N', **kwargs
     ):
         """
         The most basic ZPL to print the GRF. Since ZPL printers are stateful
@@ -334,6 +334,7 @@ class GRF(object):
             self.to_zpl_line(**kwargs),  # Download image to printer
             '^XA',  # Start Label Format
             '^MM%s,Y' % print_mode,
+            '^PO%s' % print_orientation,
             '^FO0,0',  # Field Origin to 0,0
             '^XGR:%s.GRF,1,1' % self.filename,  # Draw image
             '^FS',  # Field Separator
