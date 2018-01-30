@@ -8,9 +8,7 @@ import tempfile
 import zlib
 from ctypes import c_ushort
 from io import BytesIO
-from subprocess import PIPE, Popen
 
-import ghostscript
 from PIL import Image
 
 
@@ -440,6 +438,7 @@ class GRF(object):
             cmd += ['-I' + font_path]
 
         if use_bindings:
+            import ghostscript
             # python-ghostscript doesn't like reading/writing from
             # stdin/stdout so we need to use temp files
             with tempfile.NamedTemporaryFile() as in_file, \
@@ -463,6 +462,7 @@ class GRF(object):
 
                 pngs = out_file.read()
         else:
+            from subprocess import PIPE, Popen
             # Ghostscript seems to be sensitive to argument order
             cmd[13:13] += [
                 '-sstdout=%stderr',

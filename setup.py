@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name='zplgrf',
-    version='1.3',
+    version='1.4',
     description='Tools to work with ZPL GRF images and CUPS',
     long_description=read('README.rst'),
     author='Kyle MacFarlane',
@@ -20,9 +20,11 @@ setup(
     package_dir={'': 'src'},
     install_requires=[
         'setuptools',
-        'ghostscript',
         'pillow'
     ],
+    extra_requires={
+        'bindings': ['ghostscript']
+    },
     test_suite='zplgrf.tests',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
