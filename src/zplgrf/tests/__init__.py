@@ -96,3 +96,10 @@ class TestStringMethods(unittest.TestCase):
         output = BytesIO()
         grf.to_image().save(output, 'PNG')
         self._compare(output.getvalue(), 'pdf-image-centerofpixel.png')
+
+    def test_from_b64_zpl(self):
+        grf = GRF.from_zpl(self._read_file('pdf-optimised-zb64.zpl'))[0]
+        self._compare(grf.to_zpl(compression=2), 'pdf-optimised-asciihex.zpl')
+        output = BytesIO()
+        grf.to_image().save(output, 'PNG')
+        self._compare(output.getvalue(), 'pdf-optimised-image.png')

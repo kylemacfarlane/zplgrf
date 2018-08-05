@@ -218,7 +218,7 @@ class GRF(object):
 
         if base64_encoded:
             if crc is not None:
-                if crc != cls._calc_crc(data):
+                if crc != cls._calc_crc(data.encode('ascii')):
                     raise GRFException('Bad CRC')
             data = base64.b64decode(data)
             if base64_compressed:
