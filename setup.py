@@ -22,6 +22,9 @@ setup(
         'setuptools',
         'pillow'
     ],
+    tests_require=[
+        'ghostscript'
+    ],
     extras_require={
         'bindings': ['ghostscript']
     },
