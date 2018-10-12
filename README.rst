@@ -44,8 +44,27 @@ Using the Python API
 
 Some quick demos.
 
-Open a PDF, optimise the barcodes, and show the ZPL::
+Opan an image file, defined by the first argument and return it to stdout:
 
+.. code:: python
+
+    #!/usr/bin/python
+
+    import sys
+    from zplgrf import GRF
+    with open(sys.argv[1], 'rb') as img:
+    	pages = GRF.from_image(img.read(), 'DEMO')
+    	print(pages.to_zpl())
+        
+save the code above in a file, e.g. png2grf.py and then call it like this:
+
+.. code:: bash
+
+    png2grf.py /path/to/img.png    
+
+Open a PDF, optimise the barcodes, and show the ZPL:
+
+.. code:: python
 
     from zplgrf import GRF
     with open('source.pdf', 'rb') as pdf:
@@ -54,9 +73,9 @@ Open a PDF, optimise the barcodes, and show the ZPL::
         grf.optimise_barcodes()
         print(grf.to_zpl())
 
+When converting from PDFs you will get better performance and barcodes by using Ghostscript's center of pixel rule instead of my ``optimise_barcodes()`` method:
 
-When converting from PDFs you will get better performance and barcodes by using Ghostscript's center of pixel rule instead of my ``optimise_barcodes()`` method::
-
+.. code:: python
 
     from zplgrf import GRF
     with open('source.pdf', 'rb') as pdf:
@@ -64,9 +83,9 @@ When converting from PDFs you will get better performance and barcodes by using 
     for grf in pages:
         print(grf.to_zpl())
 
+To convert an image instead:
 
-To convert an image instead::
-
+.. code:: python
 
     from zplgrf import GRF
     with open('source.png', 'rb') as image:
@@ -74,11 +93,11 @@ To convert an image instead::
     grf.optimise_barcodes()
     print(grf.to_zpl(compression=3, quantity=1)) # Some random options
 
-
 If the ZPL won't print it's possible that your printer doesn't support ZB64 compressed images so try ``compression=2`` instead.
 
-Extract all GRFs from ZPL and save them as PNGs::
+Extract all GRFs from ZPL and save them as PNGs:
 
+.. code:: python
 
     from zplgrf import GRF
     with open('source.zpl', 'r') as zpl:
@@ -86,14 +105,13 @@ Extract all GRFs from ZPL and save them as PNGs::
     for i, grf in enumerate(grfs):
         grf.to_image().save('output-%s.png' % i, 'PNG')
 
+Optimise all barcodes in a ZPL file:
 
-Optimise all barcodes in a ZPL file::
-
+.. code:: python
 
     from zplgrf import GRF
     with open('source.zpl', 'r') as zpl:
         print(GRF.replace_grfs_in_zpl(zpl.read()))
-
 
 Arguments for the various methods are documented in the source. Some such as ``to_zpl()`` and ``optimise_barcodes()`` have quite a few arguments that may need tweaking for your purposes.
 
