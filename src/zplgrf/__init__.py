@@ -343,7 +343,7 @@ class GRF(object):
                 'Y' if override_pause else 'N'  # Don't pause between cuts
             ),
             '^XZ',  # End Label Format
-            '^IDR:%s.GRF' % self.filename  # Delete image from printer
+            '^XA^IDR:%s.GRF^FS^XZ' % self.filename  # Delete image from printer
         ]
         return ''.join(zpl)
 
