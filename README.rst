@@ -72,7 +72,7 @@ To convert an image instead::
     with open('source.png', 'rb') as image:
         grf = GRF.from_image(image.read(), 'DEMO')
     grf.optimise_barcodes()
-    print(grf.to_zpl(compression=3, quantity=1)) # Some random options
+    print(grf.to_zpl(compression=3, quantity=1, destination='E')) # Some random options
 
 
 If the ZPL won't print it's possible that your printer doesn't support ZB64 compressed images so try ``compression=2`` instead.

@@ -180,22 +180,30 @@ class GRF(object):
     @classmethod
     def replace_grfs_in_zpl(cls, zpl, optimise_barcodes=True, **kwargs):
         map_ = {}
-        for grf in cls.from_zpl(zpl):
+        for grf in cls.from_zpl(zpl, **kwargs):
             if optimise_barcodes:
                 grf.optimise_barcodes(**kwargs)
             map_[grf.filename] = grf
         output = []
+        if 'destination' in kwargs.keys():
+            destination = kwargs['destination']
+        else:
+            destination = 'R'
         for line in cls._normalise_zpl(zpl):
-            if line.startswith('~DGR:'):
+            if line.startswith('~DG{}:'.format(destination)):
                 line = map_[line.split('.')[0][5:]].to_zpl_line(**kwargs)
             output.append(line)
         return ''.join(output)
 
     @classmethod
-    def from_zpl(cls, zpl):
+    def from_zpl(cls, zpl, **kwargs):
         grfs = []
+        if 'destination' in kwargs.keys():
+            destination = kwargs['destination']
+        else:
+            destination = 'R'
         for line in cls._normalise_zpl(zpl):
-            if line.startswith('~DGR:'):
+            if line.startswith('~DG{}:'.format(destination)):
                 grfs.append(cls.from_zpl_line(line))
         return grfs
 
@@ -311,7 +319,12 @@ class GRF(object):
 
             data = data.replace('\n', '')
 
-        zpl = '~DGR:%s.GRF,%s,%s,%s' % (
+        if 'destination' in kwargs.keys():
+            destination = kwargs['destination']
+        else:
+            destination = 'R'
+        zpl = '~DG%s:%s.GRF,%s,%s,%s' % (
+            destination,
             self.filename,
             self.data.filesize,
             self.data.width // 8,
@@ -321,39 +334,49 @@ class GRF(object):
         return zpl
 
     def to_zpl(
-        self, quantity=1, pause_and_cut=0, override_pause=False,
-        print_mode='C', print_orientation='N', media_tracking='Y', **kwargs
+            self, quantity=1, pause_and_cut=0, override_pause=False,
+            print_mode='C', print_orientation='N', media_tracking='Y',
+            load_image_only=False, **kwargs
     ):
         """
         The most basic ZPL to print the GRF. Since ZPL printers are stateful
         this may not work and you may need to build your own.
         """
-        zpl = [
-            self.to_zpl_line(**kwargs),  # Download image to printer
-            '^XA',  # Start Label Format
-            '^MM%s,Y' % print_mode,
-            '^PO%s' % print_orientation,
-            '^MN%s' % media_tracking,
-            '^FO0,0',  # Field Origin to 0,0
-            '^XGR:%s.GRF,1,1' % self.filename,  # Draw image
-            '^FS',  # Field Separator
-            '^PQ%s,%s,0,%s' % (
-                int(quantity),  # Print Quantity
-                int(pause_and_cut),  # Pause and cut every N labels
-                'Y' if override_pause else 'N'  # Don't pause between cuts
-            ),
-            '^XZ',  # End Label Format
-            '^XA^IDR:%s.GRF^FS^XZ' % self.filename  # Delete image from printer
-        ]
+
+        if 'destination' in kwargs.keys():
+            destination = kwargs['destination']
+        else:
+            destination = 'R'
+
+        zpl = [self.to_zpl_line(**kwargs)]
+        if not load_image_only:
+            zpl = zpl + [
+                '^XA',  # Start Label Format
+                '^MM%s,Y' % print_mode,
+                '^PO%s' % print_orientation,
+                '^MN%s' % media_tracking,
+                '^FO0,0',  # Field Origin to 0,0
+                '^XG{}:{}.GRF,1,1'.format(destination, self.filename),  # Draw image
+                '^FS',  # Field Separator
+                '^PQ%s,%s,0,%s' % (
+                    int(quantity),  # Print Quantity
+                    int(pause_and_cut),  # Pause and cut every N labels
+                    'Y' if override_pause else 'N'  # Don't pause between cuts
+                ),
+                '^XZ',  # End Label Format
+                '^XA^ID{}:{}.GRF^FS^XZ'.format(destination, self.filename)  # Delete image from printer
+            ]
         return ''.join(zpl)
 
     @classmethod
-    def from_image(cls, image, filename):
+    def from_image(cls, image, filename, is_image_object=False):
         """
         Filename is 1-8 alphanumeric characters to identify the GRF in ZPL.
         """
-
-        source = Image.open(BytesIO(image))
+        if not is_image_object:
+            source = Image.open(BytesIO(image))
+        else:
+            source = image
         source = source.convert('1')
         width = int(math.ceil(source.size[0] / 8.0))
 
@@ -382,8 +405,8 @@ class GRF(object):
 
     @classmethod
     def from_pdf(
-        cls, pdf, filename, width=288, height=432, dpi=203, font_path=None,
-        center_of_pixel=False, use_bindings=False
+            cls, pdf, filename, width=288, height=432, dpi=203, font_path=None,
+            center_of_pixel=False, use_bindings=False
     ):
         """
         Filename is 1-8 alphanumeric characters to identify the GRF in ZPL.
@@ -442,7 +465,7 @@ class GRF(object):
             # python-ghostscript doesn't like reading/writing from
             # stdin/stdout so we need to use temp files
             with tempfile.NamedTemporaryFile() as in_file, \
-                 tempfile.NamedTemporaryFile() as out_file:
+                    tempfile.NamedTemporaryFile() as out_file:
 
                 in_file.write(pdf)
                 in_file.flush()
@@ -504,8 +527,8 @@ class GRF(object):
         self.data = GRFData(self.data.width // 8, bin=''.join(data))
 
     def _optimise_barcodes(
-        self, data, min_bar_height=20, min_bar_count=100, max_gap_size=30,
-        min_percent_white=0.2, max_percent_white=0.8, **kwargs
+            self, data, min_bar_height=20, min_bar_count=100, max_gap_size=30,
+            min_percent_white=0.2, max_percent_white=0.8, **kwargs
     ):
         """
         min_bar_height    = Minimum height of black bars in px. Set this too
@@ -565,7 +588,7 @@ class GRF(object):
             for i in range(seen_at[0], seen_at[-1]+1):
                 line = data[i]
                 line = (
-                    line[:span[0]] + (barcode.pop() * width) + line[span[1]:]
+                        line[:span[0]] + (barcode.pop() * width) + line[span[1]:]
                 )
                 data[i] = line
 
@@ -595,3 +618,4 @@ class GRF(object):
                 barcode = barcode.replace(longest, longest[:-1], 1)
 
         return barcode
+

@@ -1,6 +1,7 @@
 import os
 import unittest
 from io import BytesIO
+from PIL import Image
 
 from zplgrf import GRF
 
@@ -47,6 +48,22 @@ class TestStringMethods(unittest.TestCase):
         grf = GRF.from_image(self._read_file('pdf-image.png'), 'TEST')
         grf.optimise_barcodes()
         self._compare(grf.to_zpl(copies=2), 'image-optimised-zb64-copies2.zpl')
+
+    def test_image_object_to_zpl(self):
+        source = Image.open(BytesIO(self._read_file('pdf-image.png')))
+        grf = GRF.from_image(source, 'TEST', is_image_object=True)
+        grf.optimise_barcodes()
+        self._compare(grf.to_zpl(copies=2), 'image-optimised-zb64-copies2.zpl')
+
+    def test_image_to_zpl_eprom(self):
+        grf = GRF.from_image(self._read_file('pdf-image.png'), 'TEST')
+        grf.optimise_barcodes()
+        self._compare(grf.to_zpl(copies=2, destination='E'), 'image-optimised-zb64-copies2--eprom.zpl')
+
+    def test_image_to_zpl__loading_grf_only(self):
+        grf = GRF.from_image(self._read_file('pdf-image.png'), 'TEST')
+        grf.optimise_barcodes()
+        self._compare(grf.to_zpl(copies=2, load_image_only=True), 'image-optimised-zb64-copies2--load_image_only.zpl')
 
     def test_zpl_to_zpl(self):
         zpl = GRF.replace_grfs_in_zpl(self._read_file('pdf-asciihex.zpl'))
