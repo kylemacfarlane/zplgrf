@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name='zplgrf',
-    version='1.5.1',
+    version='1.6.0',
     description='Tools to work with ZPL GRF images and CUPS',
     long_description=read('README.rst'),
     author='Kyle MacFarlane',

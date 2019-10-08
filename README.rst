@@ -36,7 +36,9 @@ Run ``pip install zplgrf``.
 Dependencies
 ============
 
-Normal installation should handle regular Python dependencies but this project also requires Ghostscript (gs) to be installed. Newer versions of gs are recommended as rotating PDFs doesn't work properly with some of the old versions of gs many distros still come with.
+Normal installation should handle regular Python dependencies but this project also requires Ghostscript (gs) to be installed.
+
+I would recommend installing the newest version of Ghostscript. The tests fail due to slight rendering differences on old versions and the current center of pixel implementation isn't compatible with 9.22-9.26.
 
 
 Using the Python API

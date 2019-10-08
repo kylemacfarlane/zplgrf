@@ -432,6 +432,9 @@ class GRF(object):
         ]
 
         if center_of_pixel:
+            # <= 9.21 = "0 .setfilladjust" or "0 0 .setfilladjust2"
+            # 9.22-9.26 = only "0 .setfilladjust"
+            # >= 9.27 = only "0 0 .setfilladjust2"
             cmd += ['0 0 .setfilladjust2']
 
         if font_path and os.path.exists(font_path):

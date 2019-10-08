@@ -6,9 +6,9 @@ python:
     - 3.6
     - 3.7
 before_install:
-    - wget https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs922/ghostscript-9.22.tar.gz
-    - tar -xvf ghostscript-9.22.tar.gz
-    - cd ghostscript-9.22
+    - wget https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs927/ghostscript-9.27.tar.gz
+    - tar -xvf ghostscript-9.27.tar.gz
+    - cd ghostscript-9.27
     - ./configure --prefix=/usr
     - sudo make install soinstall
     - sudo ldconfig
