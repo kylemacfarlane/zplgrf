@@ -432,7 +432,7 @@ class GRF(object):
         ]
 
         if center_of_pixel:
-            cmd += ['0 .setfilladjust']
+            cmd += ['0 0 .setfilladjust2']
 
         if font_path and os.path.exists(font_path):
             cmd += ['-I' + font_path]
