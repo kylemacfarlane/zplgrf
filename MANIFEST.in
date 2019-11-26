@@ -1,4 +1,3 @@
 include .travis.yml
 include LICENSE
-include pdftozpl
-include src/zplgrf/tests/input/*
+include src/rasterlabel/tests/input/*

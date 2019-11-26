@@ -1,14 +1,14 @@
 language: python
 python:
-    - 2.7
     - 3.4
     - 3.5
     - 3.6
     - 3.7
+    - 3.8
 before_install:
-    - wget https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs927/ghostscript-9.27.tar.gz
-    - tar -xvf ghostscript-9.27.tar.gz
-    - cd ghostscript-9.27
+    - wget https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs950/ghostscript-9.50.tar.gz
+    - tar -xvf ghostscript-9.50.tar.gz
+    - cd ghostscript-9.50
     - ./configure --prefix=/usr
     - sudo make install soinstall
     - sudo ldconfig
@@ -17,7 +17,7 @@ install:
     - pip install Pillow coveralls ghostscript
 script:
     - python setup.py test
-    - coverage run --source=zplgrf setup.py test
+    - coverage run --source=rasterlabel setup.py test
 after_success:
     coveralls
 notifications:
